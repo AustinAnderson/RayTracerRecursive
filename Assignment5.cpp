@@ -38,7 +38,7 @@ float lookZ = -2;
 
 /** These are GLUI control panel objects ***/
 int  main_window;
-string filenamePath = "data\\general\\test.xml";
+string filenamePath = "data/general/test.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -90,7 +90,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		lightDir.normalize();
 			
 		double dot_nl = dot(normalVector, lightDir);
-		double dot_vr = dot(ray, ((2 * normalVector*dot_nl) - lightDir));
+		double dot_vr = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
 
 		if (dot_nl<0) dot_nl = 0;
 		if (dot_vr<0) dot_vr = 0;
@@ -198,13 +198,15 @@ void callback_load(int id) {
 		delete parser;
 	}
 	parser = new SceneParser (filenamePath);
-	cout << "success? " << parser->parse() << endl;
+    bool success=parser->parse();
+	cout << "success? " << success << endl;
 
-	setupCamera();
-
-	sceneObjects.clear();
-	Matrix identity;
-	flattenScene(parser->getRootNode(), identity);
+    if(success){
+	    setupCamera();
+	    sceneObjects.clear();
+	    Matrix identity;
+	    flattenScene(parser->getRootNode(), identity);
+    }
 }
 
 Shape* findShape(int shapeType) {
@@ -300,7 +302,8 @@ void updateCamera()
 	Point guiEye (eyeX, eyeY, eyeZ);
 	Point guiLook(lookX, lookY, lookZ);
 	camera->SetViewAngle(viewAngle);
-	camera->Orient(guiEye, guiLook, camera->GetUpVector());
+    Vector upVector=camera->GetUpVector();
+	camera->Orient(guiEye, guiLook, upVector);
 	camera->RotateU(camRotU);
 	camera->RotateV(camRotV);
 	camera->RotateW(camRotW);

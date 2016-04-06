@@ -28,7 +28,8 @@ public:
 
 protected:
 	void normalizeNormal (float x, float y, float z) {
-		normalizeNormal (Vector(x, y, z));
+		Vector v=(Vector(x, y, z));
+		normalizeNormal (v);
 	};
 
 	void normalizeNormal (Vector& v) {

@@ -8,7 +8,10 @@ Camera::~Camera() {
 }
 
 void Camera::Reset() {
-	Orient(Point(0, 0, DEFAULT_FOCUS_LENGTH), Point(0, 0, 0), Vector(0, 1, 0));
+    Point p1=Point(0,0,DEFAULT_FOCUS_LENGTH);
+    Point p2=Point();
+    Vector up=Vector(0,1,0);
+	Orient(p1,p2,up);
 	SetViewAngle(VIEW_ANGLE);
 	SetNearPlane(NEAR_PLANE);
 	SetFarPlane(FAR_PLANE);
@@ -26,7 +29,8 @@ void Camera::Orient(Point& eye, Vector& look, Vector& up) {
 
 	Vector lookVector = normalize(look);
 	m_n = -lookVector;
-	m_u = normalize(cross(lookVector, up));
+    Vector crossLookUp=cross(lookVector,up);
+	m_u = normalize(crossLookUp);
 	m_v = cross(m_n, m_u);
 
 	orient(0, 0) = m_u[0]; orient(0, 1) = m_u[1]; orient(0, 2) = m_u[2];
