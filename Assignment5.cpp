@@ -120,6 +120,39 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 	return color;
 }
 
+void renderPixel(int i,int j){
+
+    Vector ray = generateRay(i, j);
+    double minDist = MIN_ISECT_DISTANCE;
+    int closestObject = -1;
+    for (unsigned int k = 0; k < sceneObjects.size(); k++) {
+        Shape* shape = sceneObjects[k].shape;
+        double curDist = shape->Intersect(camera->GetEyePoint(), ray, sceneObjects[k].transform);
+        if ((curDist < minDist) && (curDist > 0) && !(IN_RANGE(curDist, 0))) {
+            minDist = curDist;
+            closestObject = k;
+            //*closestObject = curObject;
+            //*isectPoint = eyeInObjectSpace + minDist * rayInObjectSpace;
+        }
+    }
+    if (closestObject != -1) {
+        if (isectOnly == 1) {
+            setpixel(pixels, i, j, 255, 255, 255);
+        }
+        else {
+            Matrix inverseTransform = sceneObjects[closestObject].invTransform;
+            Point eyePointObjectSpace = inverseTransform*camera->GetEyePoint();
+            Vector rayObjectSpace = inverseTransform*ray;
+            Vector normal = sceneObjects[closestObject].shape->findIsectNormal(eyePointObjectSpace, rayObjectSpace, minDist);
+            normal = transpose(inverseTransform) * normal;
+            normal.normalize();
+            Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
+            Point color = calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
+            color = color * 255;
+            setpixel(pixels, i, j, color[0], color[1], color[2]);
+        }
+    }
+}
 
 void callback_start(int id) {
 	cout << "start button clicked!" << endl;
@@ -145,38 +178,9 @@ void callback_start(int id) {
 	for (int i = 0; i < pixelWidth; i++) {
 		for (int j = 0; j < pixelHeight; j++) {
 			// cout << "computing: " << i << ", " << j << endl;
+            renderPixel(i,j);
+        }
 
-			Vector ray = generateRay(i, j);
-			double minDist = MIN_ISECT_DISTANCE;
-			int closestObject = -1;
-			for (int k = 0; k < sceneObjects.size(); k++) {
-				Shape* shape = sceneObjects[k].shape;
-				double curDist = shape->Intersect(camera->GetEyePoint(), ray, sceneObjects[k].transform);
-				if ((curDist < minDist) && (curDist > 0) && !(IN_RANGE(curDist, 0))) {
-					minDist = curDist;
-					closestObject = k;
-					//*closestObject = curObject;
-					//*isectPoint = eyeInObjectSpace + minDist * rayInObjectSpace;
-				}
-			}
-			if (closestObject != -1) {
-				if (isectOnly == 1) {
-					setpixel(pixels, i, j, 255, 255, 255);
-				}
-				else {
-					Matrix inverseTransform = sceneObjects[closestObject].invTransform;
-					Point eyePointObjectSpace = inverseTransform*camera->GetEyePoint();
-					Vector rayObjectSpace = inverseTransform*ray;
-					Vector normal = sceneObjects[closestObject].shape->findIsectNormal(eyePointObjectSpace, rayObjectSpace, minDist);
-					normal = transpose(inverseTransform) * normal;
-					normal.normalize();
-					Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
-					Point color = calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
-					color = color * 255;
-					setpixel(pixels, i, j, color[0], color[1], color[2]);
-				}
-			}
-		}
 		double percent = (((double)i) / ((double)pixelWidth))*100.0;
 		printf("% 3f%% [rendering line % 3d]\r", percent, i);
 		fflush(stdout);
@@ -188,7 +192,6 @@ void callback_start(int id) {
 
 
 void callback_load(int id) {
-	char curDirName [2048];
 	if (filenameTextField == NULL) {
 		return;
 	}
