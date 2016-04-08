@@ -116,10 +116,10 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
         double minDist = MIN_ISECT_DISTANCE;
         double shadow=1.0;
         if(getClosestObject(lightDir,isectWorldPoint,minDist)>0){//test including the epsilone so dont collide with same object thing
-            shadow=.2;
+            shadow=0;
         }
         for (int j = 0; j<3; j++) {
-            color[j] = (color[j] + diffuse[j] * dot_nl + specular[j] * lightColor[j] * power)*shadow;
+            color[j] = color[j] + (diffuse[j] * dot_nl + specular[j] * lightColor[j] * power)*shadow;
             if (color[j]>1) {
                 color[j] = 1.0;
             }
