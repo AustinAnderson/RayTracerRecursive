@@ -2,6 +2,7 @@
 
 //#include <string.h>
 #include <iostream>
+#include <pthread.h>
 #include <fstream>
 #include <string>
 #include <GL/glui.h>
@@ -14,6 +15,7 @@
 #include "Camera.h"
 
 using namespace std;
+int getClosestObject(Vector ray,Point start,double& minDist);
 
 struct SceneObject {
 	Shape* shape;
@@ -58,7 +60,7 @@ void setupCamera();
 void updateCamera();
 void flattenScene(SceneNode* node, Matrix compositeMatrix);
 
-Vector generateRay(int x, int y) {
+Vector generateRay(int x, int y){
 	double px = -1.0 + 2.0*x/ (double)screenWidth;
 	double py = -1.0 + 2.0*y/ (double)screenHeight;
 	Point camSreenPoint(px, py, -1);
@@ -79,7 +81,6 @@ void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 
 Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint) {
 	Point color;
-	int i, j;
 
 	int numLights = parser->getNumLights();
 	for (int i = 0; i < numLights; i++) {
@@ -103,31 +104,35 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		Point diffuse(closestObject.material.cDiffuse.r, closestObject.material.cDiffuse.g, closestObject.material.cDiffuse.b); 
 		//diffuse = diffuse *255;
 
+        /*
 		double blend = closestObject.material.blend;
 		double r_blend = 1 - blend;
+        */
 
 		Point specular(closestObject.material.cSpecular.r, closestObject.material.cSpecular.g, closestObject.material.cSpecular.b);
 
 		Point lightColor(lightData.color.r, lightData.color.g, lightData.color.b);
 
-		for (j = 0; j<3; j++) {
-			color[j] = color[j] + diffuse[j] * dot_nl + specular[j] * lightColor[j] * power;
-			if (color[j]>1) {
-				color[j] = 1.0;
-			}
-		}
+        double minDist = MIN_ISECT_DISTANCE;
+        double shadow=1.0;
+        if(getClosestObject(lightDir,isectWorldPoint,minDist)>0){//test including the epsilone so dont collide with same object thing
+            shadow=.2;
+        }
+        for (int j = 0; j<3; j++) {
+            color[j] = (color[j] + diffuse[j] * dot_nl + specular[j] * lightColor[j] * power)*shadow;
+            if (color[j]>1) {
+                color[j] = 1.0;
+            }
+        }
 	}
 	return color;
 }
 
-void renderPixel(int i,int j){
-
-    Vector ray = generateRay(i, j);
-    double minDist = MIN_ISECT_DISTANCE;
+int getClosestObject(Vector ray,Point start,double& minDist){
     int closestObject = -1;
     for (unsigned int k = 0; k < sceneObjects.size(); k++) {
         Shape* shape = sceneObjects[k].shape;
-        double curDist = shape->Intersect(camera->GetEyePoint(), ray, sceneObjects[k].transform);
+        double curDist = shape->Intersect(start, ray, sceneObjects[k].transform);
         if ((curDist < minDist) && (curDist > 0) && !(IN_RANGE(curDist, 0))) {
             minDist = curDist;
             closestObject = k;
@@ -135,6 +140,13 @@ void renderPixel(int i,int j){
             //*isectPoint = eyeInObjectSpace + minDist * rayInObjectSpace;
         }
     }
+    return closestObject;
+}
+void renderPixel(int i,int j){
+
+    Vector ray = generateRay(i, j);
+    double minDist = MIN_ISECT_DISTANCE;
+    int closestObject=getClosestObject(ray,camera->GetEyePoint(),minDist);
     if (closestObject != -1) {
         if (isectOnly == 1) {
             setpixel(pixels, i, j, 255, 255, 255);
@@ -149,7 +161,9 @@ void renderPixel(int i,int j){
             Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
             Point color = calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
             color = color * 255;
+            //mutex lock
             setpixel(pixels, i, j, color[0], color[1], color[2]);
+            //mutex unlock
         }
     }
 }
@@ -165,7 +179,7 @@ void callback_start(int id) {
 	pixelWidth = screenWidth;
 	pixelHeight = screenHeight;
 
-	cout << "Processing " << pixelWidth << " colemns and " << pixelHeight << " rows." << endl;
+	cout << "Processing " << pixelWidth << " columns and " << pixelHeight << " rows." << endl;
 
 	updateCamera();
 
@@ -317,7 +331,7 @@ void updateCamera()
 void flattenScene(SceneNode* node, Matrix compositeMatrix)
 {
 	std::vector<SceneTransformation*> transVec = node->transformations;
-	for (int i = 0; i<transVec.size(); i++) {
+	for (unsigned int i = 0; i<transVec.size(); i++) {
 		SceneTransformation* trans = transVec[i];
 		switch (trans->type) {
 		case TRANSFORMATION_TRANSLATE:
@@ -338,7 +352,7 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 	SceneGlobalData globalData;
 	parser->getGlobalData(globalData);
 	std::vector<ScenePrimitive*> objectVec = node->primitives;
-	for (int j = 0; j<objectVec.size(); j++) {
+	for (unsigned int j = 0; j<objectVec.size(); j++) {
 		SceneObject tempObj;
 		tempObj.transform = compositeMatrix;
 		tempObj.invTransform = invert(compositeMatrix);
@@ -365,7 +379,7 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 	}
 
 	std::vector<SceneNode*> childrenVec = node->children;
-	for (int k = 0; k<childrenVec.size(); k++) {
+	for (unsigned int k = 0; k<childrenVec.size(); k++) {
 		flattenScene(childrenVec[k], compositeMatrix);
 	}
 }
