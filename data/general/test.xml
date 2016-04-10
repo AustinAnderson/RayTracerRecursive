@@ -1,6 +1,6 @@
 <scenefile>
     <globaldata>
-	<diffusecoeff v="0.2"/>
+	<diffusecoeff v="1.0"/>
     </globaldata>
 
     <cameradata>
@@ -15,7 +15,7 @@
 	<position x="0" y="0" z="0"/>
 	<color r="0.5" g="0.5" b="0.5"/>
     </lightdata>
-
+	
     <lightdata>
 	<id v="1"/>
 	<position x="4" y="0" z="0"/>
@@ -59,7 +59,7 @@
 		    <scale x="3" y="3" z="3"/>
 		    <object type="primitive" name="sphere" >
 			<diffuse r="0" g="1" b="1"/>
-		    </object>
+        </object>
 		</transblock>
 		<transblock>
 		    <translate x="-4" y="0" z="0"/>

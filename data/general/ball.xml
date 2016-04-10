@@ -4,12 +4,23 @@
 		<specularcoeff v="0.5"/>
 		<ambientcoeff v="0.5"/>
 	</globaldata>
+    <lightdata>
+      <id v="0"/>
+      <position x="-4" y="-4" z="-4"/>
+      <color r="1" g="1" b="1"/>
+  </lightdata>
 
-	<lightdata>
-		<id v="0"/>
-		<color r="1" g="1" b="1"/>
-		<position x="3" y="3" z="3"/>
-	</lightdata>
+    <lightdata>
+      <id v="0"/>
+      <position x="-4" y="-4" z="0"/>
+      <color r="1" g="1" b="1"/>
+    </lightdata>
+
+    <lightdata>
+      <id v="1"/>
+      <position x="4" y="4" z="4"/>
+      <color r="1" g="1" b="1"/>
+    </lightdata>
 
 	<object type="tree" name="root">
 		<transblock>

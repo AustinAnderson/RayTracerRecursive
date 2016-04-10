@@ -1,6 +1,7 @@
 #define NUM_OPENGL_LIGHTS 8
 
 //#include <string.h>
+#include <ctime>
 #include <iostream>
 #include <pthread.h>
 #include <fstream>
@@ -15,7 +16,8 @@
 #include "Camera.h"
 
 using namespace std;
-int getClosestObject(Vector ray,Point start,double& minDist);
+Vector getReflectedRay(Vector ray,Vector normal);
+int getClosestObjectNdx(Vector ray,Point start,double& minDist);
 
 struct SceneObject {
 	Shape* shape;
@@ -25,7 +27,7 @@ struct SceneObject {
 };
 
 /** These are the live variables passed into GLUI ***/
-int  isectOnly = 1;
+int  isectOnly = 0;
 
 int	 camRotU = 0;
 int	 camRotV = 0;
@@ -40,7 +42,7 @@ float lookZ = -2;
 
 /** These are GLUI control panel objects ***/
 int  main_window;
-string filenamePath = "data/general/test.xml";
+string filenamePath = "data/tests/work.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -55,6 +57,10 @@ Cone* cone = new Cone();
 Sphere* sphere = new Sphere();
 SceneParser* parser = NULL;
 Camera* camera = new Camera();
+double Ka=0;
+double Kd=0;
+double Ks=0;
+double Kt=0;
 
 void setupCamera();
 void updateCamera();
@@ -72,6 +78,9 @@ Vector generateRay(int x, int y){
 	ray.normalize();
 	return ray;
 }
+Vector getReflectedRay(Vector ray,Vector normal){
+    return (ray+dot(ray,normal)*2*normal);
+}
 
 void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 	buf[(y*pixelWidth + x) * 3 + 0] = (GLubyte)r;
@@ -82,6 +91,10 @@ void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint) {
 	Point color;
 
+    /*
+    double blend = closestObject.material.blend;
+    double r_blend = 1 - blend;
+    */
 	int numLights = parser->getNumLights();
 	for (int i = 0; i < numLights; i++) {
 		SceneLightData lightData;
@@ -91,44 +104,60 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		lightDir.normalize();
 			
 		double dot_nl = dot(normalVector, lightDir);
-		double dot_vr = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
+		double dot_rv = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
 
 		if (dot_nl<0) dot_nl = 0;
-		if (dot_vr<0) dot_vr = 0;
+		if (dot_rv<0) dot_rv = 0;
 
-		
-		double power = pow(dot_vr, closestObject.material.shininess);
+		//                      (r.v )^f
+		double RdotVToTheF= pow(dot_rv, closestObject.material.shininess);
+
 		//power = power * 255;
 
+		Point Od(closestObject.material.cDiffuse.r,
+                 closestObject.material.cDiffuse.g,
+                 closestObject.material.cDiffuse.b); 
 
-		Point diffuse(closestObject.material.cDiffuse.r, closestObject.material.cDiffuse.g, closestObject.material.cDiffuse.b); 
-		//diffuse = diffuse *255;
-
-        /*
-		double blend = closestObject.material.blend;
-		double r_blend = 1 - blend;
-        */
-
-		Point specular(closestObject.material.cSpecular.r, closestObject.material.cSpecular.g, closestObject.material.cSpecular.b);
-
-		Point lightColor(lightData.color.r, lightData.color.g, lightData.color.b);
+		Point Os(closestObject.material.cSpecular.r,
+                 closestObject.material.cSpecular.g,
+                 closestObject.material.cSpecular.b);
+		Point lightColor(lightData.color.r,
+                         lightData.color.g,
+                         lightData.color.b);
 
         double minDist = MIN_ISECT_DISTANCE;
-        double shadow=1.0;
-        if(getClosestObject(lightDir,isectWorldPoint,minDist)>0){//test including the epsilone so dont collide with same object thing
-            shadow=0;
-        }
-        for (int j = 0; j<3; j++) {
-            color[j] = color[j] + (diffuse[j] * dot_nl + specular[j] * lightColor[j] * power)*shadow;
-            if (color[j]>1) {
-                color[j] = 1.0;
+        if(getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){
+            for (int j = 0; j<3; j++) {
+                color[j] += 
+                        /* 
+                          attenuation*
+                        //*/
+                        lightColor[j]*
+                        ((Kd*Od[j]* dot_nl)+     //diffuse
+                         (Ks*Os[j]*RdotVToTheF)); //specular
+                        
             }
         }
+
 	}
+    //now color is the sum of diffuse and specular times attenuatiion
+    //times light color over all lights
+    Point Oa(closestObject.material.cAmbient.r,
+             closestObject.material.cAmbient.g,
+             closestObject.material.cAmbient.b); 
+    for (int j = 0; j<3; j++) {
+        color[j]+=
+                /*
+                  Ia*
+                //*/
+                  Ka*Oa[j];
+        
+        if (color[j]>1) {color[j] = 1.0;}
+    }
 	return color;
 }
 
-int getClosestObject(Vector ray,Point start,double& minDist){
+int getClosestObjectNdx(Vector ray,Point start,double& minDist){
     int closestObject = -1;
     for (unsigned int k = 0; k < sceneObjects.size(); k++) {
         Shape* shape = sceneObjects[k].shape;
@@ -146,12 +175,14 @@ void renderPixel(int i,int j){
 
     Vector ray = generateRay(i, j);
     double minDist = MIN_ISECT_DISTANCE;
-    int closestObject=getClosestObject(ray,camera->GetEyePoint(),minDist);
-    if (closestObject != -1) {
-        if (isectOnly == 1) {
+    int closestObject=getClosestObjectNdx(ray,camera->GetEyePoint(),minDist);
+    if (isectOnly == 1) {
             setpixel(pixels, i, j, 255, 255, 255);
-        }
-        else {
+    }
+    else {
+        Point previous_color=Point(1,1,1);
+        Point color;
+        if (closestObject != -1) {
             Matrix inverseTransform = sceneObjects[closestObject].invTransform;
             Point eyePointObjectSpace = inverseTransform*camera->GetEyePoint();
             Vector rayObjectSpace = inverseTransform*ray;
@@ -159,12 +190,11 @@ void renderPixel(int i,int j){
             normal = transpose(inverseTransform) * normal;
             normal.normalize();
             Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
-            Point color = calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
-            color = color * 255;
-            //mutex lock
-            setpixel(pixels, i, j, color[0], color[1], color[2]);
-            //mutex unlock
+            color=calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
+
         }
+        color = color * 255;
+        setpixel(pixels, i, j, color[0], color[1], color[2]);
     }
 }
 
@@ -189,6 +219,14 @@ void callback_start(int id) {
 	pixels = new GLubyte[pixelWidth  * pixelHeight * 3];
 	memset(pixels, 0, pixelWidth  * pixelHeight * 3);
 
+    SceneGlobalData gData;
+    parser->getGlobalData(gData);
+    Ka=gData.ka;
+    Ks=gData.ks;
+    Kd=gData.kd;
+    Kt=gData.kt;
+    double now=clock();
+    string space(1024,' ');
 	for (int i = 0; i < pixelWidth; i++) {
 		for (int j = 0; j < pixelHeight; j++) {
 			// cout << "computing: " << i << ", " << j << endl;
@@ -196,10 +234,16 @@ void callback_start(int id) {
         }
 
 		double percent = (((double)i) / ((double)pixelWidth))*100.0;
-		printf("% 3f%% [rendering line % 3d]\r", percent, i);
+        double timeTaken=(clock()-now)/CLOCKS_PER_SEC;
+        double eta=(double(timeTaken)/double(i+1))*(double(pixelWidth-i-1));
+        char progress[1024];
+		sprintf(progress,"% 3f%% [rendering line % 3d] run time %f, eta %fs",
+                percent, i,timeTaken,eta);
+        cout<<progress<<'\r';
 		fflush(stdout);
 	}
-	printf("% 3f%% [rendered]                  \n", 100.0);
+	printf("% 3f%% [rendered]\
+                                                        \n", 100.0);
 	glutPostRedisplay();
 }
 
@@ -253,6 +297,7 @@ Shape* findShape(int shapeType) {
 
 /***************************************** myGlutIdle() ***********/
 
+bool initialLoad;//TODO delete
 void myGlutIdle(void)
 {
 	/* According to the GLUT specification, the current window is
@@ -260,6 +305,11 @@ void myGlutIdle(void)
 	it if necessary */
 	if (glutGetWindow() != main_window)
 		glutSetWindow(main_window);
+    if(!initialLoad){//TODO delete
+        callback_load(0);//delete
+        callback_start(0);//delete
+        initialLoad=true;//delete
+    }//delete
 
 	glutPostRedisplay();
 }

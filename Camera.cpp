@@ -18,16 +18,17 @@ void Camera::Reset() {
 	m_screenWidthRatio = 1.0f;
 }
 
-void Camera::Orient(Point& eye, Point& focus, Vector& up) {
+void Camera::Orient(const Point& eye, const Point& focus, const Vector& up) {
 	Vector lookVector(focus - eye);
 	Orient(eye, lookVector, up);
 }
 
 
-void Camera::Orient(Point& eye, Vector& look, Vector& up) {
+void Camera::Orient(const Point& eye,const Vector& look,const Vector& up) {
 	Matrix orient;
 
-	Vector lookVector = normalize(look);
+	Vector lookVector =look;
+    lookVector.normalize();
 	m_n = -lookVector;
     Vector crossLookUp=cross(lookVector,up);
 	m_u = normalize(crossLookUp);

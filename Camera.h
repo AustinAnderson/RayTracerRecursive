@@ -15,8 +15,8 @@ public:
 	Camera();
 	~Camera();
 	void Reset();
-	void Orient(Point& eye, Point& focus, Vector& up);
-	void Orient(Point& eye, Vector& look, Vector& up);
+	void Orient(const Point& eye,const  Point& focus,const Vector& up);
+	void Orient(const Point& eye,const Vector& look,const Vector& up);
 	void SetViewAngle(double viewAngle);
 	void SetNearPlane(double nearPlane);
 	void SetFarPlane(double farPlane);
