@@ -89,8 +89,11 @@ void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 }
 
 Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint) {
+    if(isectOnly){
+        Ka=0;
+        Kd=0;
+    }
 	Point color;
-
     /*
     double blend = closestObject.material.blend;
     double r_blend = 1 - blend;
@@ -104,7 +107,9 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		lightDir.normalize();
 			
 		double dot_nl = dot(normalVector, lightDir);
-		double dot_rv = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
+		//double dot_rv = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
+		//double dot_rv = dot(ray, getReflectedRay(ray,normalVector));
+		double dot_rv = dot(ray, (lightDir-(2 * dot_nl*normalVector)));
 
 		if (dot_nl<0) dot_nl = 0;
 		if (dot_rv<0) dot_rv = 0;
@@ -133,7 +138,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                           attenuation*
                         //*/
                         lightColor[j]*
-                        ((Kd*Od[j]* dot_nl)+     //diffuse
+                        ((Kd*Od[j]* dot_nl)+      //diffuse
                          (Ks*Os[j]*RdotVToTheF)); //specular
                         
             }
@@ -176,8 +181,9 @@ void renderPixel(int i,int j){
     Vector ray = generateRay(i, j);
     double minDist = MIN_ISECT_DISTANCE;
     int closestObject=getClosestObjectNdx(ray,camera->GetEyePoint(),minDist);
-    if (isectOnly == 1) {
-            setpixel(pixels, i, j, 255, 255, 255);
+    //if (isectOnly == 1) {
+    if (44== 1) {
+        setpixel(pixels, i, j, 255, 255, 255);
     }
     else {
         Point previous_color=Point(1,1,1);
