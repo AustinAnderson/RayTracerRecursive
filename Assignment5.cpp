@@ -88,7 +88,7 @@ void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 	buf[(y*pixelWidth + x) * 3 + 2] = (GLubyte)b;
 }
 
-Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint) {
+Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint,int recurseDepth) {
     if(isectOnly){
         Ka=0;
         Kd=0;
@@ -104,11 +104,12 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		parser->getLightData(i, lightData);
 
 		Vector lightDir = lightData.pos - isectWorldPoint;
+        if(lightData.type==LIGHT_DIRECTIONAL){
+		    lightDir = -lightData.dir;
+        }
 		lightDir.normalize();
 			
 		double dot_nl = dot(normalVector, lightDir);
-		//double dot_rv = dot(ray, ((2 * dot_nl*normalVector) - lightDir));
-		//double dot_rv = dot(ray, getReflectedRay(ray,normalVector));
 		double dot_rv = dot(ray, (lightDir-(2 * dot_nl*normalVector)));
 
 		if (dot_nl<0) dot_nl = 0;
@@ -116,8 +117,6 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 
 		//                      (r.v )^f
 		double RdotVToTheF= pow(dot_rv, closestObject.material.shininess);
-
-		//power = power * 255;
 
 		Point Od(closestObject.material.cDiffuse.r,
                  closestObject.material.cDiffuse.g,
@@ -159,7 +158,25 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
         
         if (color[j]>1) {color[j] = 1.0;}
     }
-	return color;
+    //alright time to recurse (*shudders*)
+    Point reflectedColor(0,0,0);
+    if(recurseDepth>0){
+        double minDist=MIN_ISECT_DISTANCE;//record before this to sum them up to calculate attenuation
+        Vector reflectedRay=getReflectedRay(ray,normalVector);
+        int closestObjectNdx=getClosestObjectNdx(reflectedRay,isectWorldPoint,minDist);
+        if (closestObjectNdx != -1) {
+            Matrix inverseTransform = sceneObjects[closestObjectNdx].invTransform;
+            Point fromPointObjectSpace= inverseTransform*isectWorldPoint;
+            Vector rayObjectSpace = inverseTransform*reflectedRay;
+            Vector normal = sceneObjects[closestObjectNdx].shape->findIsectNormal(fromPointObjectSpace, rayObjectSpace, minDist);
+            normal = transpose(inverseTransform) * normal;
+            normal.normalize();
+            isectWorldPoint = isectWorldPoint + minDist*reflectedRay;
+            reflectedColor=calculateColor(sceneObjects[closestObjectNdx], normal, reflectedRay, isectWorldPoint,--recurseDepth);
+        }
+    }
+	return color+reflectedColor;
+	//return reflectedColor;
 }
 
 int getClosestObjectNdx(Vector ray,Point start,double& minDist){
@@ -170,8 +187,6 @@ int getClosestObjectNdx(Vector ray,Point start,double& minDist){
         if ((curDist < minDist) && (curDist > 0) && !(IN_RANGE(curDist, 0))) {
             minDist = curDist;
             closestObject = k;
-            //*closestObject = curObject;
-            //*isectPoint = eyeInObjectSpace + minDist * rayInObjectSpace;
         }
     }
     return closestObject;
@@ -196,8 +211,7 @@ void renderPixel(int i,int j){
             normal = transpose(inverseTransform) * normal;
             normal.normalize();
             Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
-            color=calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint);
-
+            color=calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint,0);
         }
         color = color * 255;
         setpixel(pixels, i, j, color[0], color[1], color[2]);
