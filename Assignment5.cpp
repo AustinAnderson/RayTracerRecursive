@@ -29,6 +29,8 @@ struct SceneObject {
 /** These are the live variables passed into GLUI ***/
 int  isectOnly = 0;
 
+int	 maxDepth= 0;
+
 int	 camRotU = 0;
 int	 camRotV = 0;
 int	 camRotW = 0;
@@ -42,7 +44,8 @@ float lookZ = -2;
 
 /** These are GLUI control panel objects ***/
 int  main_window;
-string filenamePath = "data/tests/work.xml";
+//string filenamePath = "data/tests/work.xml";
+string filenamePath = "data/tests/mirror_test.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -162,7 +165,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
     Point reflectedColor(0,0,0);
     if(recurseDepth>0){
         double minDist=MIN_ISECT_DISTANCE;//record before this to sum them up to calculate attenuation
-        Vector reflectedRay=getReflectedRay(ray,normalVector);
+        Vector reflectedRay=getReflectedRay(ray,normalVector);//RECURSION_WORK
         int closestObjectNdx=getClosestObjectNdx(reflectedRay,isectWorldPoint,minDist);
         if (closestObjectNdx != -1) {
             Matrix inverseTransform = sceneObjects[closestObjectNdx].invTransform;
@@ -211,7 +214,7 @@ void renderPixel(int i,int j){
             normal = transpose(inverseTransform) * normal;
             normal.normalize();
             Point isectWorldPoint = camera->GetEyePoint() + minDist*ray;
-            color=calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint,0);
+            color=calculateColor(sceneObjects[closestObject], normal, ray, isectWorldPoint,maxDepth);
         }
         color = color * 255;
         setpixel(pixels, i, j, color[0], color[1], color[2]);
