@@ -18,6 +18,10 @@
 using namespace std;
 Vector getReflectedRay(Vector ray,Vector normal);
 int getClosestObjectNdx(Vector ray,Point start,double& minDist);
+ostream& operator<<(ostream& os,Point& p){
+    os<<"{"<<p[0]<<","<<p[1]<<","<<p[2]<<"}";
+    return os;
+}
 
 struct SceneObject {
 	Shape* shape;
@@ -29,7 +33,12 @@ struct SceneObject {
 /** These are the live variables passed into GLUI ***/
 int  isectOnly = 0;
 
-int	 maxDepth= 0;
+int  specularOn   = 1;
+int  ambientOn    = 1;
+int  diffuseOn    = 1;
+int  transparentOn= 1;
+
+int	 maxDepth= 1;
 
 int	 camRotU = 0;
 int	 camRotV = 0;
@@ -60,10 +69,6 @@ Cone* cone = new Cone();
 Sphere* sphere = new Sphere();
 SceneParser* parser = NULL;
 Camera* camera = new Camera();
-double Ka=0;
-double Kd=0;
-double Ks=0;
-double Kt=0;
 
 void setupCamera();
 void updateCamera();
@@ -82,7 +87,8 @@ Vector generateRay(int x, int y){
 	return ray;
 }
 Vector getReflectedRay(Vector ray,Vector normal){
-    return (ray+dot(ray,normal)*2*normal);
+	double dot_rn = dot(ray, normal);
+    return (ray-(2 * dot_rn*normal));
 }
 
 void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
@@ -92,10 +98,21 @@ void setpixel(GLubyte* buf, int x, int y, int r, int g, int b) {
 }
 
 Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray, Point isectWorldPoint,int recurseDepth) {
-    if(isectOnly){
-        Ka=0;
-        Kd=0;
-    }
+    Point Od(closestObject.material.cDiffuse.r *diffuseOn,
+             closestObject.material.cDiffuse.g *diffuseOn,
+             closestObject.material.cDiffuse.b *diffuseOn); 
+
+    Point Os(closestObject.material.cSpecular.r*specularOn,
+             closestObject.material.cSpecular.g*specularOn,
+             closestObject.material.cSpecular.b*specularOn);
+
+    Point Or(closestObject.material.cReflective.r*specularOn,
+             closestObject.material.cReflective.g*specularOn,
+             closestObject.material.cReflective.b*specularOn);
+
+    Point Oa(closestObject.material.cAmbient.r *ambientOn,
+             closestObject.material.cAmbient.g *ambientOn,
+             closestObject.material.cAmbient.b *ambientOn); 
 	Point color;
     /*
     double blend = closestObject.material.blend;
@@ -121,18 +138,11 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 		//                      (r.v )^f
 		double RdotVToTheF= pow(dot_rv, closestObject.material.shininess);
 
-		Point Od(closestObject.material.cDiffuse.r,
-                 closestObject.material.cDiffuse.g,
-                 closestObject.material.cDiffuse.b); 
-
-		Point Os(closestObject.material.cSpecular.r,
-                 closestObject.material.cSpecular.g,
-                 closestObject.material.cSpecular.b);
 		Point lightColor(lightData.color.r,
                          lightData.color.g,
                          lightData.color.b);
 
-        double minDist = MIN_ISECT_DISTANCE;
+        double minDist = MIN_ISECT_DISTANCE;//K values multiplied into O's by flatten
         if(getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){
             for (int j = 0; j<3; j++) {
                 color[j] += 
@@ -140,8 +150,8 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                           attenuation*
                         //*/
                         lightColor[j]*
-                        ((Kd*Od[j]* dot_nl)+      //diffuse
-                         (Ks*Os[j]*RdotVToTheF)); //specular
+                        ((Od[j]* dot_nl)+      //diffuse
+                         (Os[j]*RdotVToTheF)); //specular
                         
             }
         }
@@ -149,15 +159,12 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
 	}
     //now color is the sum of diffuse and specular times attenuatiion
     //times light color over all lights
-    Point Oa(closestObject.material.cAmbient.r,
-             closestObject.material.cAmbient.g,
-             closestObject.material.cAmbient.b); 
     for (int j = 0; j<3; j++) {
         color[j]+=
                 /*
                   Ia*
                 //*/
-                  Ka*Oa[j];
+                  Oa[j];
         
         if (color[j]>1) {color[j] = 1.0;}
     }
@@ -176,6 +183,9 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
             normal.normalize();
             isectWorldPoint = isectWorldPoint + minDist*reflectedRay;
             reflectedColor=calculateColor(sceneObjects[closestObjectNdx], normal, reflectedRay, isectWorldPoint,--recurseDepth);
+            reflectedColor[0]*=Or[0];
+            reflectedColor[1]*=Or[1];
+            reflectedColor[2]*=Or[2];
         }
     }
 	return color+reflectedColor;
@@ -199,8 +209,7 @@ void renderPixel(int i,int j){
     Vector ray = generateRay(i, j);
     double minDist = MIN_ISECT_DISTANCE;
     int closestObject=getClosestObjectNdx(ray,camera->GetEyePoint(),minDist);
-    //if (isectOnly == 1) {
-    if (44== 1) {
+    if (isectOnly == 1) {
         setpixel(pixels, i, j, 255, 255, 255);
     }
     else {
@@ -244,10 +253,6 @@ void callback_start(int id) {
 
     SceneGlobalData gData;
     parser->getGlobalData(gData);
-    Ka=gData.ka;
-    Ks=gData.ks;
-    Kd=gData.kd;
-    Kt=gData.kt;
     double now=clock();
     string space(1024,' ');
 	for (int i = 0; i < pixelWidth; i++) {
@@ -429,20 +434,21 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 		SceneObject tempObj;
 		tempObj.transform = compositeMatrix;
 		tempObj.invTransform = invert(compositeMatrix);
+        //K's already applied
 
 		tempObj.material = objectVec[j]->material;
-		tempObj.material.cAmbient.r *= globalData.ka;
-		tempObj.material.cAmbient.g *= globalData.ka;
-		tempObj.material.cAmbient.b *= globalData.ka;
-		tempObj.material.cDiffuse.r *= globalData.kd;
-		tempObj.material.cDiffuse.g *= globalData.kd;
-		tempObj.material.cDiffuse.b *= globalData.kd;
-		tempObj.material.cSpecular.r *= globalData.ks;
-		tempObj.material.cSpecular.g *= globalData.ks;
-		tempObj.material.cSpecular.b *= globalData.ks;
-		tempObj.material.cReflective.r *= globalData.ks;
-		tempObj.material.cReflective.g *= globalData.ks;
-		tempObj.material.cReflective.b *= globalData.ks;
+		tempObj.material.cAmbient.r     *= globalData.ka;
+		tempObj.material.cAmbient.g     *= globalData.ka;
+		tempObj.material.cAmbient.b     *= globalData.ka;
+		tempObj.material.cDiffuse.r     *= globalData.kd;
+		tempObj.material.cDiffuse.g     *= globalData.kd;
+		tempObj.material.cDiffuse.b     *= globalData.kd;
+		tempObj.material.cSpecular.r    *= globalData.ks;
+		tempObj.material.cSpecular.g    *= globalData.ks;
+		tempObj.material.cSpecular.b    *= globalData.ks;
+		tempObj.material.cReflective.r  *= globalData.ks;
+		tempObj.material.cReflective.g  *= globalData.ks;
+		tempObj.material.cReflective.b  *= globalData.ks;
 		tempObj.material.cTransparent.r *= globalData.kt;
 		tempObj.material.cTransparent.g *= globalData.kt;
 		tempObj.material.cTransparent.b *= globalData.kt;
@@ -538,7 +544,14 @@ int main(int argc, char* argv[])
 	filenameTextField->set_w(300);
 	glui->add_button("Load", 0, callback_load);
 	glui->add_button("Start!", 0, callback_start);
-	glui->add_checkbox("Isect Only", &isectOnly);
+	glui->add_checkbox("Isect       Only" , &isectOnly);
+	glui->add_checkbox("Ambient     Light", &ambientOn);
+	glui->add_checkbox("Diffuse     Light", &diffuseOn);
+	glui->add_checkbox("Specular    Light", &specularOn);
+	glui->add_checkbox("Transparent Light", &transparentOn);
+	
+	
+	
 	
 	GLUI_Panel *camera_panel = glui->add_panel("Camera");
 	(new GLUI_Spinner(camera_panel, "RotateV:", &camRotV))
