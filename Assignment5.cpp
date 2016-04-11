@@ -551,6 +551,9 @@ int main(int argc, char* argv[])
 	glui->add_checkbox("Transparent Light", &transparentOn);
 	
 	
+	GLUI_Panel *recursionPanel = glui->add_panel("Recursion");
+	(new GLUI_Spinner(recursionPanel, "Recursion Depth:", &maxDepth))
+		->set_int_limits(0, 6);
 	
 	
 	GLUI_Panel *camera_panel = glui->add_panel("Camera");
