@@ -23,7 +23,7 @@ int  isectOnly = 0;
 int  specularOn   = 1;
 int  ambientOn    = 1;
 int  diffuseOn    = 1;
-int  tryTextures  = 0;
+int  tryTextures  = 1;
 int  shadowsOn    = 1;
 
 int	 maxDepth= 1;
@@ -42,8 +42,8 @@ float lookZ = -2;
 /** These are GLUI control panel objects ***/
 int  main_window;
 //string filenamePath = "data/tests/work.xml";
-//string filenamePath = "data/tests/earthcube.xml";
-string filenamePath = "data/tests/shinyballs.xml";
+string filenamePath = "data/tests/earthcube.xml";
+//string filenamePath = "data/tests/shinyballs.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -141,7 +141,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                           attenuation*
                         //*/
                         lightColor[j]*
-                        ((Od[j]* dot_nl)+      //diffuse
+						((closestObject.getMappedPoint(isectWorldPoint)[j] * dot_nl) +      //diffuse
                          (Os[j]*RdotVToTheF)); //specular
                 }
                         

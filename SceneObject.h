@@ -20,9 +20,9 @@ public:
     Point getMappedPoint(Point isectWorldPoint){
 		//texture map not in use
 		if (!(material.textureMap->isUsed)){
-			return Point(material.cAmbient.r, 
-						 material.cAmbient.g,
-						 material.cAmbient.b);
+			return Point(material.cDiffuse.r, 
+						 material.cDiffuse.g,
+						 material.cDiffuse.b);
 		}
 		double mapX, mapY;
         int mappedNdxX=0;
@@ -43,7 +43,7 @@ public:
 				double arctan = atan(value);
 				arctan *= arctan;
 				mapY = isectObject[1];
-				if (arctan > 0){
+				if (arctan < 0){
 					mapX = -arctan / (2 * PI);
 				}
 				else{
@@ -83,7 +83,7 @@ public:
 				double arctan = atan(value);
 				arctan *= arctan;
 				mapY = isectObject[1];
-				if (arctan > 0){
+				if (arctan < 0){
 					mapX = -arctan / (2 * PI);
 				}
 				else{
@@ -100,7 +100,7 @@ public:
 				double value = isectObject[0] / isectObject[2];
 				double arctan = atan(value);
 				arctan *= arctan;
-				if (arctan > 0){
+				if (arctan < 0){
 					mapX = -arctan / (2 * PI);
 				}
 				else{
@@ -139,6 +139,10 @@ public:
             string line;
             ifstream file;
             file.open(material.textureMap->filename);
+			if (!file.is_open()){
+				cout << "ERROR: File Not Found" << endl;
+				return;
+			}
             getline(file, line);
             //verify that the first line is "P3"
             if (line != "P3"){
@@ -173,6 +177,7 @@ public:
             }
             file.close();
         }
+		return;
     }
 private:
     int width;
