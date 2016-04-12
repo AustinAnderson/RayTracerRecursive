@@ -153,11 +153,11 @@ public:
                     for (int j = 0; j < height; j++){
                         Point toAdd;
                         file >> line;
-                        toAdd[0] = atoi(line.c_str());
+                        toAdd[0] = atoi(line.c_str())/1000.0;
                         file >> line;
-                        toAdd[1] = atoi(line.c_str());
+                        toAdd[1] = atoi(line.c_str())/1000.0;
                         file >> line;
-                        toAdd[2] = atoi(line.c_str());
+                        toAdd[2] = atoi(line.c_str())/1000.0;
                         row.push_back(toAdd);
                     }
                     textureMap.push_back(row);
