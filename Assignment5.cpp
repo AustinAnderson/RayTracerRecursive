@@ -2,17 +2,10 @@
 
 //#include <string.h>
 #include <ctime>
-#include <iostream>
 #include <pthread.h>
-#include <fstream>
 #include <string>
 #include <GL/glui.h>
-#include "Shape.h"
-#include "Cube.h"
-#include "Cylinder.h"
-#include "Cone.h"
-#include "Sphere.h"
-#include "SceneParser.h"
+#include "SceneObject.h"
 #include "Camera.h"
 
 using namespace std;
@@ -23,12 +16,6 @@ ostream& operator<<(ostream& os,Point& p){
     return os;
 }
 
-struct SceneObject {
-	Shape* shape;
-	Matrix transform;
-	Matrix invTransform;
-	SceneMaterial material;
-};
 
 /** These are the live variables passed into GLUI ***/
 int  isectOnly = 0;
@@ -74,43 +61,6 @@ void setupCamera();
 void updateCamera();
 void flattenScene(SceneNode* node, Matrix compositeMatrix);
 
-Point** loadTextureMap(SceneFileMap* map, int& width, int& height){
-	Point** tMap;
-	string line;
-	fstream file;
-	file.open(map->filename);
-	getline(file, line);
-	//verify that the first line is "P3"
-	if (line != "P3"){
-		cout << "ERROR: " << map->filename << " is not a valid texture map" << endl;
-		tMap = NULL;
-	}
-	else{
-		//ignore next line; comment
-		getline(file, line);
-		//read width and height of texture map
-		file >> line;
-		width = atoi(line.c_str());
-		file >> line;
-		height = atoi(line.c_str());
-		tMap = new Point*[width];
-		for (int i = 0; i < width; i++){
-			tMap[i] = new Point[height];
-		}
-		for (int i = 0; i < width; i++){
-			for (int j = 0; j < height; j++){
-				file >> line;
-				(tMap[i][j])[0] = atoi(line.c_str());
-				file >> line;
-				(tMap[i][j])[1] = atoi(line.c_str());
-				file >> line;
-				(tMap[i][j])[2] = atoi(line.c_str());
-			}
-		}
-	}
-	return tMap;
-}
-
 Vector generateRay(int x, int y){
 	double px = -1.0 + 2.0*x/ (double)screenWidth;
 	double py = -1.0 + 2.0*y/ (double)screenHeight;
@@ -151,18 +101,8 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
              closestObject.material.cAmbient.g *ambientOn,
              closestObject.material.cAmbient.b *ambientOn); 
 	Point color;
-    /*
     double blend = closestObject.material.blend;
     double r_blend = 1 - blend;
-    */
-	SceneFileMap* map = NULL;
-	Point** tMap = NULL;
-	int width = 0;
-	int height = 0;
-	/*if (closestObject.material.textureMap->isUsed){
-		map = closestObject.material.textureMap;
-		tMap = loadTextureMap(map, width, height);
-	}*/
 	int numLights = parser->getNumLights();
 	for (int i = 0; i < numLights; i++) {
 		SceneLightData lightData;
@@ -188,7 +128,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                          lightData.color.b);
 
         double minDist = MIN_ISECT_DISTANCE;//K values multiplied into O's by flatten
-        if(getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){
+        if(getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){//if intersection from object to light then shadow, so don't render
             for (int j = 0; j<3; j++) {
                 color[j] += 
                         /* 
@@ -210,6 +150,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                   Ia*
                 //*/
                   Oa[j];
+        color[j]=(color[j]*blend)+(r_blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
         
         if (color[j]>1) {color[j] = 1.0;}
     }
@@ -233,13 +174,6 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
             reflectedColor[2]*=Or[2];
         }
     }
-	/*if (tMap != NULL){
-		for (int i = 0; i < width; i++){
-			delete tMap[i];
-		}
-		delete tMap;
-		tMap = NULL;
-	}*/
 	return color+reflectedColor;
 	//return reflectedColor;
 }
@@ -506,6 +440,7 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 		tempObj.material.cTransparent.b *= globalData.kt;
 
 		tempObj.shape = findShape(objectVec[j]->type);
+        tempObj.mapTexture();//mapps the texture for that object if it exists
 		sceneObjects.push_back(tempObj);
 	}
 
