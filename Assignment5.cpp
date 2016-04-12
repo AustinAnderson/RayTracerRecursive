@@ -23,7 +23,7 @@ int  isectOnly = 0;
 int  specularOn   = 1;
 int  ambientOn    = 1;
 int  diffuseOn    = 1;
-int  tryTextures  = 1;
+int  tryTextures  = 0;
 int  shadowsOn    = 1;
 
 int	 maxDepth= 1;
@@ -42,7 +42,8 @@ float lookZ = -2;
 /** These are GLUI control panel objects ***/
 int  main_window;
 //string filenamePath = "data/tests/work.xml";
-string filenamePath = "data/tests/earthcube.xml";
+string filenamePath = "data/tests/mirror_test.xml";
+//string filenamePath = "data/tests/earthcube.xml";
 //string filenamePath = "data/tests/shinyballs.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
@@ -50,6 +51,7 @@ int pixelWidth = 0, pixelHeight = 0;
 int screenWidth = 0, screenHeight = 0;
 
 vector<SceneObject> sceneObjects;
+vector<vector<vector<Point> >*> textureMaps;
 
 /** these are the global variables used for rendering **/
 Cube* cube = new Cube();
@@ -132,19 +134,13 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
         double minDist = MIN_ISECT_DISTANCE;//K values multiplied into O's by flatten
         if(!shadowsOn||getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){//if intersection from object to light then shadow, so don't render
             for (int j = 0; j<3; j++) {
-                if(recurseDepth<maxDepth){
-                    color[j] += Os[j]*RdotVToTheF;
-                }
-                else{
                 color[j] += 
                         /* 
                           attenuation*
                         //*/
                         lightColor[j]*
-						((closestObject.getMappedPoint(isectWorldPoint)[j] * dot_nl) +      //diffuse
+						((Od[j] * dot_nl) +      //diffuse
                          (Os[j]*RdotVToTheF)); //specular
-                }
-                        
             }
         }
 
@@ -450,9 +446,11 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 
 		tempObj.shape = findShape(objectVec[j]->type);
 		tempObj.shapeType = objectVec[j]->type;
-        if(tryTextures){
-            tempObj.mapTexture();//mapps the texture for that object if it exists
-        }
+            if(tempObj.material.textureMap->isUsed){
+                textureMaps.push_back(new vector<vector<Point> >);
+                tempObj.textureMap=textureMaps.back();
+                tempObj.mapTexture();//mapps the texture for that object if it exists
+            }
 		sceneObjects.push_back(tempObj);
 	}
 
@@ -489,6 +487,9 @@ void onExit()
 	delete cone;
 	delete sphere;
 	delete camera;
+    for(unsigned int i=0;i<textureMaps.size();i++){
+        delete textureMaps[i];
+    }
 	if (parser != NULL) {
 		delete parser;
 	}

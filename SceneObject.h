@@ -14,7 +14,7 @@ public:
 	Matrix transform;
 	Matrix invTransform;
 	SceneMaterial material;
-    vector<vector<Point> > textureMap;
+    vector<vector<Point> >* textureMap;
 	PrimitiveType shapeType;
 
     Point getMappedPoint(Point isectWorldPoint){
@@ -132,13 +132,13 @@ public:
 		if (mappedNdxY >= height){
 			mappedNdxY = height - 1;
 		}
-        return textureMap[mappedNdxX][mappedNdxY];
+        return (*textureMap)[mappedNdxX][mappedNdxY];
     }
     void mapTexture(){
         if (material.textureMap->isUsed){
             string line;
             ifstream file;
-            file.open(material.textureMap->filename);
+            file.open(material.textureMap->filename.c_str());
 			if (!file.is_open()){
 				cout << "ERROR: File Not Found" << endl;
 				return;
@@ -171,7 +171,7 @@ public:
 						toAdd[2] = atoi(line.c_str()) / 255.0;
                         row.push_back(toAdd);
                     }
-                    textureMap.push_back(row);
+                    textureMap->push_back(row);
                     row.clear();
                 }
             }
