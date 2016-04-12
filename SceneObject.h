@@ -15,16 +15,119 @@ public:
 	Matrix invTransform;
 	SceneMaterial material;
     vector<vector<Point> > textureMap;
+	PrimitiveType shapeType;
 
     Point getMappedPoint(Point isectWorldPoint){
+		//texture map not in use
+		if (!(material.textureMap->isUsed)){
+			return Point(material.cAmbient.r, 
+						 material.cAmbient.g,
+						 material.cAmbient.b);
+		}
+		double mapX, mapY;
         int mappedNdxX=0;
         int mappedNdxY=0;
-        /*
-         * map stuff here
-         *
-         * using shape transform, etc
-         *
-         */
+		double repeatX = material.textureMap->repeatU;
+		double repeatY = material.textureMap->repeatV;
+		Point isectObject = invTransform * isectWorldPoint;
+		switch (shapeType){
+		case SHAPE_CONE:
+			//find point on unit square for a cone
+			//intersect is on the cap
+			if (isectObject[1] == -0.5){
+				mapX = isectObject[0];
+				mapY = isectObject[2];
+			}
+			else{
+				double value = isectObject[0] / isectObject[2];
+				double arctan = atan(value);
+				arctan *= arctan;
+				mapY = isectObject[1];
+				if (arctan > 0){
+					mapX = -arctan / (2 * PI);
+				}
+				else{
+					mapX = 1 - (arctan / (2 * PI));
+				}
+			}
+			break;
+		
+		case SHAPE_CUBE:
+			//find point on unit square for a cube
+			//x-coordinate is 0
+			if (isectObject[0] == 0){
+				mapX = isectObject[2] + 0.5;
+				mapY = isectObject[1] + 0.5;
+			}
+			//y-coordinate is 0
+			else if (isectObject[1] == 0){
+				mapX = isectObject[0] + 0.5;
+				mapY = isectObject[2] + 0.5;
+			}
+			//z-coordinate is 0
+			else if (isectObject[2] == 0){
+				mapX = isectObject[0] + 0.5;
+				mapY = isectObject[1] + 0.5;
+			}
+			break;
+		
+		case SHAPE_CYLINDER:
+			//find point on unit square for a cylinder
+			//intersect is on a cap
+			if (isectObject[1] == 0.5 || isectObject[1] == -0.5){
+				mapX = isectObject[0];
+				mapY = isectObject[2];
+			}
+			else{
+				double value = isectObject[0] / isectObject[2];
+				double arctan = atan(value);
+				arctan *= arctan;
+				mapY = isectObject[1];
+				if (arctan > 0){
+					mapX = -arctan / (2 * PI);
+				}
+				else{
+					mapX = 1 - (arctan / (2 * PI));
+				}
+			}
+			break;
+		
+		case SHAPE_SPHERE:
+			//find point on unit square for a sphere
+			mapY = (asin(isectObject[1] / 0.5) / PI) + 0.5;
+			//intersect is not at either pole
+			if(mapY != 0 && mapY != 1){
+				double value = isectObject[0] / isectObject[2];
+				double arctan = atan(value);
+				arctan *= arctan;
+				if (arctan > 0){
+					mapX = -arctan / (2 * PI);
+				}
+				else{
+					mapX = 1 - (arctan / (2 * PI));
+				}
+			}
+			//intersect is at a pole
+			else{
+				mapX = 0.5;
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		//mappedNdxX and mappedNdxY now point to the unit square.
+		//Now, we point them to the texture map.
+		mappedNdxX = width * mapX;
+		mappedNdxY = height * mapY;
+
+		//Now, to map the point so that repeats can occur.
+		mappedNdxX = (mappedNdxX * repeatX);
+		mappedNdxX = mappedNdxX % width;
+		mappedNdxY = mappedNdxY * repeatY;
+		mappedNdxY = mappedNdxY % height;
+
         return textureMap[mappedNdxX][mappedNdxY];
     }
     void mapTexture(){

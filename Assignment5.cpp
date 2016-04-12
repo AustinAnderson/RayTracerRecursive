@@ -47,7 +47,7 @@ GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
 int screenWidth = 0, screenHeight = 0;
 
-std::vector<SceneObject> sceneObjects;
+vector<SceneObject> sceneObjects;
 
 /** these are the global variables used for rendering **/
 Cube* cube = new Cube();
@@ -394,7 +394,7 @@ void updateCamera()
 
 void flattenScene(SceneNode* node, Matrix compositeMatrix)
 {
-	std::vector<SceneTransformation*> transVec = node->transformations;
+	vector<SceneTransformation*> transVec = node->transformations;
 	for (unsigned int i = 0; i<transVec.size(); i++) {
 		SceneTransformation* trans = transVec[i];
 		switch (trans->type) {
@@ -415,7 +415,7 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 
 	SceneGlobalData globalData;
 	parser->getGlobalData(globalData);
-	std::vector<ScenePrimitive*> objectVec = node->primitives;
+	vector<ScenePrimitive*> objectVec = node->primitives;
 	for (unsigned int j = 0; j<objectVec.size(); j++) {
 		SceneObject tempObj;
 		tempObj.transform = compositeMatrix;
@@ -440,11 +440,12 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 		tempObj.material.cTransparent.b *= globalData.kt;
 
 		tempObj.shape = findShape(objectVec[j]->type);
+		tempObj.shapeType = objectVec[j]->type;
         tempObj.mapTexture();//mapps the texture for that object if it exists
 		sceneObjects.push_back(tempObj);
 	}
 
-	std::vector<SceneNode*> childrenVec = node->children;
+	vector<SceneNode*> childrenVec = node->children;
 	for (unsigned int k = 0; k<childrenVec.size(); k++) {
 		flattenScene(childrenVec[k], compositeMatrix);
 	}
