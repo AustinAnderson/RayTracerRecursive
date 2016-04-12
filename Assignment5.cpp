@@ -135,7 +135,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                           attenuation*
                         //*/
                         lightColor[j]*
-                        ((Od[j]* dot_nl)+      //diffuse
+						((closestObject.getMappedPoint(isectWorldPoint)[j] * dot_nl) +      //diffuse
                          (Os[j]*RdotVToTheF)); //specular
                         
             }
@@ -150,7 +150,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                   Ia*
                 //*/
                   Oa[j];
-        color[j]=(color[j]*r_blend)+(blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
+        //color[j]=(color[j]*r_blend)+(blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
         
         if (color[j]>1) {color[j] = 1.0;}
     }
