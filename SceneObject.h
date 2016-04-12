@@ -54,20 +54,20 @@ public:
 		
 		case SHAPE_CUBE:
 			//find point on unit square for a cube
-			//x-coordinate is 0
-			if (isectObject[0] == 0){
+			//x-coordinate is 0.5
+			if (isectObject[0] == 0.5 || isectObject[0] == -0.5){
+				mapX = 1 - (isectObject[1] + 0.5);
+				mapY = 1 - (isectObject[2] + 0.5);
+			}
+			//y-coordinate is 0.5
+			else if (isectObject[1] == 0.5 || isectObject[1] == -0.5){
 				mapX = isectObject[2] + 0.5;
-				mapY = isectObject[1] + 0.5;
+				mapY = isectObject[0] + 0.5;
 			}
-			//y-coordinate is 0
-			else if (isectObject[1] == 0){
-				mapX = isectObject[0] + 0.5;
-				mapY = isectObject[2] + 0.5;
-			}
-			//z-coordinate is 0
-			else if (isectObject[2] == 0){
-				mapX = isectObject[0] + 0.5;
-				mapY = isectObject[1] + 0.5;
+			//z-coordinate is 0.5
+			else{
+				mapX = 1 - (isectObject[1] + 0.5);
+				mapY = 1 - (isectObject[0] + 0.5);
 			}
 			break;
 		
@@ -114,20 +114,24 @@ public:
 			break;
 
 		default:
+			exit(1);
 			break;
 		}
-
 		//mappedNdxX and mappedNdxY now point to the unit square.
 		//Now, we point them to the texture map.
 		mappedNdxX = width * mapX;
 		mappedNdxY = height * mapY;
-
 		//Now, to map the point so that repeats can occur.
-		mappedNdxX = (mappedNdxX * repeatX);
-		mappedNdxX = mappedNdxX % width;
-		mappedNdxY = mappedNdxY * repeatY;
-		mappedNdxY = mappedNdxY % height;
-
+		//mappedNdxX = (mappedNdxX * repeatX);
+		//mappedNdxX = mappedNdxX % width;
+		//mappedNdxY = mappedNdxY * repeatY;
+		//mappedNdxY = mappedNdxY % height;
+		if (mappedNdxX >= width){
+			mappedNdxX = width - 1;
+		}
+		if (mappedNdxY >= height){
+			mappedNdxY = height - 1;
+		}
         return textureMap[mappedNdxX][mappedNdxY];
     }
     void mapTexture(){
@@ -152,12 +156,15 @@ public:
                 for (int i = 0; i < width; i++){
                     for (int j = 0; j < height; j++){
                         Point toAdd;
+						file >> line;
+						//toAdd[0] = atoi(line.c_str());
+						toAdd[0] = atoi(line.c_str()) / 255.0;
                         file >> line;
-                        toAdd[0] = atoi(line.c_str())/1000.0;
-                        file >> line;
-                        toAdd[1] = atoi(line.c_str())/1000.0;
-                        file >> line;
-                        toAdd[2] = atoi(line.c_str())/1000.0;
+						//toAdd[1] = atoi(line.c_str());
+						toAdd[1] = atoi(line.c_str()) / 255.0;
+						file >> line;
+						//toAdd[2] = atoi(line.c_str());
+						toAdd[2] = atoi(line.c_str()) / 255.0;
                         row.push_back(toAdd);
                     }
                     textureMap.push_back(row);

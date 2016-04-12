@@ -41,7 +41,7 @@ float lookZ = -2;
 /** These are GLUI control panel objects ***/
 int  main_window;
 //string filenamePath = "data/tests/work.xml";
-string filenamePath = "data/tests/mirror_test.xml";
+string filenamePath = "data/tests/earthcube.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -150,7 +150,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                   Ia*
                 //*/
                   Oa[j];
-        color[j]=(color[j]*blend)+(r_blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
+        color[j]=(color[j]*r_blend)+(blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
         
         if (color[j]>1) {color[j] = 1.0;}
     }
@@ -499,7 +499,7 @@ int main(int argc, char* argv[])
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowPosition(50, 50);
-	glutInitWindowSize(500, 500);
+	glutInitWindowSize(200,200);
 
 	main_window = glutCreateWindow("CSI 4341: Assignment 5");
 	glutDisplayFunc(myGlutDisplay);
