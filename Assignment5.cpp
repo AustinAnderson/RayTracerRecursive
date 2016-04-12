@@ -23,7 +23,8 @@ int  isectOnly = 0;
 int  specularOn   = 1;
 int  ambientOn    = 1;
 int  diffuseOn    = 1;
-int  transparentOn= 1;
+int  tryTextures  = 0;
+int  shadowsOn    = 1;
 
 int	 maxDepth= 1;
 
@@ -41,7 +42,8 @@ float lookZ = -2;
 /** These are GLUI control panel objects ***/
 int  main_window;
 //string filenamePath = "data/tests/work.xml";
-string filenamePath = "data/tests/earthcube.xml";
+//string filenamePath = "data/tests/earthcube.xml";
+string filenamePath = "data/tests/shinyballs.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -128,8 +130,12 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                          lightData.color.b);
 
         double minDist = MIN_ISECT_DISTANCE;//K values multiplied into O's by flatten
-        if(getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){//if intersection from object to light then shadow, so don't render
+        if(!shadowsOn||getClosestObjectNdx(lightDir,isectWorldPoint,minDist)<0){//if intersection from object to light then shadow, so don't render
             for (int j = 0; j<3; j++) {
+                if(recurseDepth<maxDepth){
+                    color[j] += Os[j]*RdotVToTheF;
+                }
+                else{
                 color[j] += 
                         /* 
                           attenuation*
@@ -137,6 +143,7 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                         lightColor[j]*
                         ((Od[j]* dot_nl)+      //diffuse
                          (Os[j]*RdotVToTheF)); //specular
+                }
                         
             }
         }
@@ -150,7 +157,9 @@ Point calculateColor(SceneObject closestObject, Vector normalVector, Vector ray,
                   Ia*
                 //*/
                   Oa[j];
-        color[j]=(color[j]*r_blend)+(blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
+        if(tryTextures){
+            color[j]=(color[j]*r_blend)+(blend*closestObject.getMappedPoint(isectWorldPoint)[j]);//weighted average of calculated color and texture map color
+        }
         
         if (color[j]>1) {color[j] = 1.0;}
     }
@@ -441,7 +450,9 @@ void flattenScene(SceneNode* node, Matrix compositeMatrix)
 
 		tempObj.shape = findShape(objectVec[j]->type);
 		tempObj.shapeType = objectVec[j]->type;
-        tempObj.mapTexture();//mapps the texture for that object if it exists
+        if(tryTextures){
+            tempObj.mapTexture();//mapps the texture for that object if it exists
+        }
 		sceneObjects.push_back(tempObj);
 	}
 
@@ -499,7 +510,7 @@ int main(int argc, char* argv[])
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowPosition(50, 50);
-	glutInitWindowSize(200,200);
+	glutInitWindowSize(500,500);//SIZE
 
 	main_window = glutCreateWindow("CSI 4341: Assignment 5");
 	glutDisplayFunc(myGlutDisplay);
@@ -532,12 +543,17 @@ int main(int argc, char* argv[])
 	filenameTextField->set_w(300);
 	glui->add_button("Load", 0, callback_load);
 	glui->add_button("Start!", 0, callback_start);
-	glui->add_checkbox("Isect       Only" , &isectOnly);
-	glui->add_checkbox("Ambient     Light", &ambientOn);
-	glui->add_checkbox("Diffuse     Light", &diffuseOn);
-	glui->add_checkbox("Specular    Light", &specularOn);
-	glui->add_checkbox("Transparent Light", &transparentOn);
 	
+	GLUI_Panel *renderOptions= glui->add_panel("RenderOptions");
+	glui->add_checkbox_to_panel(renderOptions,"Isect Only" , &isectOnly);
+	glui->add_checkbox_to_panel(renderOptions,"Textures"         , &tryTextures);
+	glui->add_checkbox_to_panel(renderOptions,"Shadows"          , &shadowsOn);
+
+	glui->add_column_to_panel(renderOptions, true);
+
+	glui->add_checkbox_to_panel(renderOptions,"Ambient", &ambientOn);
+	glui->add_checkbox_to_panel(renderOptions,"Diffuse", &diffuseOn);
+	glui->add_checkbox_to_panel(renderOptions,"Specular", &specularOn);
 	
 	GLUI_Panel *recursionPanel = glui->add_panel("Recursion");
 	(new GLUI_Spinner(recursionPanel, "Recursion Depth:", &maxDepth))
