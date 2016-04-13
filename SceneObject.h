@@ -156,19 +156,21 @@ public:
                 width = atoi(line.c_str());
                 file >> line;
                 height = atoi(line.c_str());
+				file >> line;
+				maxVal = atof(line.c_str());
                 vector<Point> row;
                 for (int i = 0; i < width; i++){
                     for (int j = 0; j < height; j++){
                         Point toAdd;
 						file >> line;
 						//toAdd[0] = atoi(line.c_str());
-						toAdd[0] = atoi(line.c_str()) / 255.0;
+						toAdd[0] = atoi(line.c_str()) / maxVal;
                         file >> line;
 						//toAdd[1] = atoi(line.c_str());
-						toAdd[1] = atoi(line.c_str()) / 255.0;
+						toAdd[1] = atoi(line.c_str()) / maxVal;
 						file >> line;
 						//toAdd[2] = atoi(line.c_str());
-						toAdd[2] = atoi(line.c_str()) / 255.0;
+						toAdd[2] = atoi(line.c_str()) / maxVal;
                         row.push_back(toAdd);
                     }
                     textureMap->push_back(row);
@@ -182,5 +184,6 @@ public:
 private:
     int width;
     int height;
+	double maxVal;
 };
 #endif//SCENE_OBJECT_H
