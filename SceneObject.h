@@ -58,12 +58,12 @@ public:
 		case SHAPE_CUBE:
 			//find point on unit square for a cube
 			//mapping onto the yz plane
-			if (isectObject[x] == 0.5 || isectObject[x] == -0.5){
+			if (isClose(isectObject[x],0.5) || isClose(isectObject[x],-0.5)){
 				mapX = 1 - (isectObject[z] + 0.5);
 				mapY = 1 - (isectObject[y] + 0.5);
 			}
 			// mapping onto the xz plane
-			else if (isectObject[y] == 0.5 || isectObject[y] == -0.5){
+			else if (isClose(isectObject[y],0.5) || isClose(isectObject[y],-0.5)){
 				mapX = isectObject[z] + 0.5;
 				mapY = isectObject[x] + 0.5;
 			}
@@ -122,8 +122,8 @@ public:
 		}
 		//mappedNdxX and mappedNdxY now point to the unit square.
 		//Now, we point them to the texture map.
-		mappedNdxX = width * mapX;
-		mappedNdxY = height * mapY;
+		mappedNdxX = (int)(width * mapX);
+		mappedNdxY = (int)(height * mapY);
 		//Now, to map the point so that repeats can occur.
 		//mappedNdxX = (mappedNdxX * repeatX);
 		//mappedNdxX = mappedNdxX % width;
@@ -185,8 +185,15 @@ public:
 		return;
     }
 private:
-    int width;
-    int height;
+    bool isClose(double value1,double value2){
+        double result=(value1-value2);
+        if(result<0){
+            result=result*-1;
+        }
+        return result<.00001;
+    }
+    double width;
+    double height;
 	double maxVal;
 };
 #endif//SCENE_OBJECT_H
