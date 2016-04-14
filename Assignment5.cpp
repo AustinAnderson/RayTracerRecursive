@@ -23,7 +23,7 @@ int  isectOnly = 0;
 int  specularOn   = 1;
 int  ambientOn    = 1;
 int  diffuseOn    = 1;
-int  tryTextures  = 0;
+int  tryTextures  = 1;
 int  shadowsOn    = 1;
 
 int	 maxDepth= 1;
