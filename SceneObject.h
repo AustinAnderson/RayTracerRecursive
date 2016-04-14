@@ -30,6 +30,9 @@ public:
 		double repeatX = material.textureMap->repeatU;
 		double repeatY = material.textureMap->repeatV;
 		Point isectObject = invTransform * isectWorldPoint;
+        const int x=0;//for easier reading when doing points
+        const int y=1;
+        const int z=2;
 		switch (shapeType){
 		case SHAPE_CONE:
 			//find point on unit square for a cone
@@ -54,20 +57,20 @@ public:
 		
 		case SHAPE_CUBE:
 			//find point on unit square for a cube
-			//x-coordinate is 0.5
-			if (isectObject[0] == 0.5 || isectObject[0] == -0.5){
-				mapX = 1 - (isectObject[1] + 0.5);
-				mapY = 1 - (isectObject[2] + 0.5);
+			//mapping onto the yz plane
+			if (isectObject[x] == 0.5 || isectObject[x] == -0.5){
+				mapX = 1 - (isectObject[z] + 0.5);
+				mapY = 1 - (isectObject[y] + 0.5);
 			}
-			//y-coordinate is 0.5
-			else if (isectObject[1] == 0.5 || isectObject[1] == -0.5){
-				mapX = isectObject[2] + 0.5;
-				mapY = isectObject[0] + 0.5;
+			// mapping onto the xz plane
+			else if (isectObject[y] == 0.5 || isectObject[y] == -0.5){
+				mapX = isectObject[z] + 0.5;
+				mapY = isectObject[x] + 0.5;
 			}
-			//z-coordinate is 0.5
+			//mapping onto the xy plane
 			else{
-				mapX = 1 - (isectObject[1] + 0.5);
-				mapY = 1 - (isectObject[0] + 0.5);
+				mapX = 1 - (isectObject[y] + 0.5);
+				mapY = 1 - (isectObject[x] + 0.5);
 			}
 			break;
 		

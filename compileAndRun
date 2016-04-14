@@ -1,4 +1,0 @@
-#!/bin/bash
-if g++ *.cpp -lglui -lglut -lGL -lGLU -std=c++11 -g;then
-    ./a.out
-fi

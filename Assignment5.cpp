@@ -41,10 +41,7 @@ float lookZ = -2;
 
 /** These are GLUI control panel objects ***/
 int  main_window;
-//string filenamePath = "data/tests/work.xml";
-string filenamePath = "data/tests/mirror_test.xml";
-//string filenamePath = "data/tests/earthcube.xml";
-//string filenamePath = "data/tests/shinyballs.xml";
+string filenamePath = "data/tests/work.xml";
 GLUI_EditText* filenameTextField = NULL;
 GLubyte* pixels = NULL;
 int pixelWidth = 0, pixelHeight = 0;
@@ -266,7 +263,20 @@ void callback_start(int id) {
 	glutPostRedisplay();
 }
 
+void callback_load(int id);
 
+void callback_loadEarthCube(int id){
+    filenamePath = "data/tests/earthcube.xml";
+    callback_load(id);
+}
+void callback_loadMirror(int id){
+    filenamePath = "data/tests/mirror_test.xml";
+    callback_load(id);
+}
+void callback_loadShadow(int id){
+    filenamePath = "data/tests/shadow_test.xml";
+    callback_load(id);
+}
 
 void callback_load(int id) {
 	if (filenameTextField == NULL) {
@@ -316,7 +326,7 @@ Shape* findShape(int shapeType) {
 
 /***************************************** myGlutIdle() ***********/
 
-bool initialLoad;//TODO delete
+bool initialLoad=true;//TODO delete
 void myGlutIdle(void)
 {
 	/* According to the GLUT specification, the current window is
@@ -502,6 +512,9 @@ void onExit()
 
 int main(int argc, char* argv[])
 {
+    if(argc==2&&argv[1][0]=='r'){
+        initialLoad=false;
+    }
 	atexit(onExit);
 
 	/****************************************/
@@ -542,8 +555,12 @@ int main(int argc, char* argv[])
 
 	filenameTextField = new GLUI_EditText( glui, "Filename:", filenamePath);
 	filenameTextField->set_w(300);
+	GLUI_Panel *Loaders= glui->add_panel("Load Panels");
 	glui->add_button("Load", 0, callback_load);
 	glui->add_button("Start!", 0, callback_start);
+	glui->add_button_to_panel(Loaders,"Load EarthCube  ", 0, callback_loadEarthCube);
+	glui->add_button_to_panel(Loaders,"Load Mirror_Test", 0, callback_loadMirror);
+	glui->add_button_to_panel(Loaders,"Load Shadow_Test", 0, callback_loadShadow);
 	
 	GLUI_Panel *renderOptions= glui->add_panel("RenderOptions");
 	glui->add_checkbox_to_panel(renderOptions,"Isect Only" , &isectOnly);
